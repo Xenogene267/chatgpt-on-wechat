@@ -188,14 +188,21 @@ class WechatChannel(ChatChannel):
             itchat.send_file(reply.content, toUserName=receiver)
             logger.info("[WX] sendFile={}, receiver={}".format(reply.content, receiver))
         elif reply.type == ReplyType.IMAGE_URL:  # 从网络下载图片
-            img_url = reply.content
-            pic_res = requests.get(img_url, stream=True)
-            image_storage = io.BytesIO()
-            for block in pic_res.iter_content(1024):
-                image_storage.write(block)
-            image_storage.seek(0)
-            itchat.send_image(image_storage, toUserName=receiver)
-            logger.info("[WX] sendImage url={}, receiver={}".format(img_url, receiver))
+            content = reply.content.split("?id=")
+            for index, item in enumerate(content):
+                if index > 0:
+                    itchat.send("图片ID为：" + item, toUserName=receiver)
+                    logger.info("[WX] sendMsg={}, receiver={}".format(reply, receiver))
+                else:
+                    proxy = conf().get("proxy", "")
+                    proxies = {"http": proxy, "https": proxy}
+                    pic_res = requests.get(item, proxies=proxies, stream=True)
+                    image_storage = io.BytesIO()
+                    for block in pic_res.iter_content(1024):
+                        image_storage.write(block)
+                    image_storage.seek(0)
+                    itchat.send_image(image_storage, toUserName=receiver)
+                    logger.info("[WX] sendImage url={}, receiver={}".format(item, receiver))
         elif reply.type == ReplyType.IMAGE:  # 从文件读取图片
             image_storage = reply.content
             image_storage.seek(0)
